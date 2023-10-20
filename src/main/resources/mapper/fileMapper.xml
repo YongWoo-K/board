@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app2.mapper.FileMapper">
+    <insert id="insert">
+        INSERT INTO TBL_FILE2
+        (FILE_ID, FILE_NAME, FILE_UUID, FILE_SIZE, FILE_UPLOAD_PATH, FILE_IS_IMAGE, BOARD_ID)
+        VALUES(SEQ_FILE2.NEXTVAL, #{fileName}, #{fileUuid}, #{fileSize}, #{fileUploadPath}, #{fileIsImage}, #{boardId})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM TBL_FILE2 WHERE BOARD_ID = #{boardId}
+    </delete>
+
+    <delete id="deleteFile">
+        DELETE FROM TBL_FILE2 WHERE FILE_ID =#{fileId}
+    </delete>
+
+    <select id="selectAllByBoardId" resultType="fileVO">
+        SELECT FILE_ID, FILE_NAME, FILE_UUID, FILE_SIZE, FILE_UPLOAD_PATH, FILE_IS_IMAGE, BOARD_ID
+        FROM TBL_FILE2
+        WHERE BOARD_ID = #{boardId}
+    </select>
+
+    <select id="selectOldFiles" resultType="fileVO">
+        SELECT FILE_ID, FILE_NAME, FILE_UUID, FILE_SIZE, FILE_UPLOAD_PATH, FILE_IS_IMAGE, BOARD_ID
+        FROM TBL_FILE2 WHERE FILE_UPLOAD_PATH = TO_CHAR(SYSDATE-1, 'YYYY/MM/DD')
+    </select>
+</mapper>

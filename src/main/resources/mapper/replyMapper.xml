@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app2.mapper.ReplyMapper">
+    <sql id="search">
+        <if test="keyword != null and !keyword.equals('')">
+            AND
+            <trim prefix="(" prefixOverrides="OR" suffix=")">
+                <foreach item="type" collection="types">
+                    <trim prefix="OR">
+                        <choose>
+                            <when test="type == 'c'.toString()">
+                                BOARD_CONTENT LIKE '%' || #{keyword} || '%'
+                            </when>
+                            <when test="type == 'w'.toString()">
+                                BOARD_WRITER LIKE '%' || #{keyword} || '%'
+                            </when>
+                        </choose>
+                    </trim>
+                </foreach>
+            </trim>
+        </if>
+    </sql>
+
+    <select id="selectAllByBoardId" resultType="replyVO">
+        SELECT REPLY_ID, REPLY_CONTENT, REPLY_WRITER, REPLY_REGISTER_DATE, REPLY_UPDATE_DATE, BOARD_ID
+        FROM
+        (
+            SELECT ROWNUM R, REPLY_ID, REPLY_CONTENT, REPLY_WRITER, REPLY_REGISTER_DATE, REPLY_UPDATE_DATE, BOARD_ID
+            FROM
+            (
+                SELECT REPLY_ID, REPLY_CONTENT, REPLY_WRITER, REPLY_REGISTER_DATE, REPLY_UPDATE_DATE, BOARD_ID
+                FROM TBL_REPLY2
+                WHERE BOARD_ID = #{boardId}
+                <include refid="search"/>
+                ORDER BY REPLY_ID DESC
+            )
+            <![CDATA[
+                WHERE ROWNUM <= #{page} * #{rowCount}
+                ]]>
+        )
+        <![CDATA[
+        WHERE R > (#{page} - 1) * #{rowCount}
+        ]]>
+    </select>
+
+    <select id="selectCountOfNextPage" resultType="_int">
+        SELECT COUNT(REPLY_ID)
+        FROM
+        (
+            SELECT ROWNUM R, REPLY_ID, REPLY_CONTENT, REPLY_WRITER, REPLY_REGISTER_DATE, REPLY_UPDATE_DATE, BOARD_ID
+            FROM
+            (
+                SELECT REPLY_ID, REPLY_CONTENT, REPLY_WRITER, REPLY_REGISTER_DATE, REPLY_UPDATE_DATE, BOARD_ID
+                FROM TBL_REPLY2
+                WHERE BOARD_ID = #{boardId}
+                <include refid="search"/>
+                ORDER BY REPLY_ID DESC
+            )
+            <![CDATA[WHERE ROWNUM <= (#{page} + 1) * #{rowCount}]]>
+        )
+        <![CDATA[WHERE R > #{page} * #{rowCount}]]>
+    </select>
+
+    <insert id="insert">
+        INSERT INTO TBL_REPLY2
+        (REPLY_ID, REPLY_CONTENT, REPLY_WRITER, BOARD_ID)
+        VALUES(SEQ_REPLY2.NEXTVAL, #{replyContent}, #{replyWriter}, #{boardId})
+    </insert>
+
+    <update id="update">
+        UPDATE TBL_REPLY2
+        SET REPLY_CONTENT = #{replyContent}, REPLY_UPDATE_DATE = SYSDATE
+        WHERE REPLY_ID = #{replyId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM TBL_REPLY2
+        WHERE REPLY_ID = #{replyId}
+    </delete>
+</mapper>

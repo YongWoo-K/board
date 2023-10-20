@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>게시글 수정</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .uploadResult ul {
+            display: flex;
+            list-style: none;
+        }
+
+        .uploadResult ul li {
+            position: relative;
+        }
+
+        .uploadResult ul li span {
+            display: block;
+            position: absolute;
+            right: 10px;
+            top: -25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body class="is-preload">
+<!-- Main -->
+<div id="main">
+    <div class="wrapper">
+        <div class="inner">
+
+            <!-- Elements -->
+            <header class="major">
+                <h1>Board</h1>
+                <p>게시글 수정</p>
+            </header>
+            <!-- Table -->
+            <h3><a class="list button small" th:href="@{/board/list(page=${criteria.page}, type=${search.type}, keyword=${search.keyword})}">목록 보기</a></h3>
+            <div class="content">
+                <div class="form">
+                    <!--form method="post" id="updateForm" enctype="multipart/form-data"-->
+                    <form method="post" name="updateForm" th:action="@{/board/modify}" th:object="${boardVO}">
+                        <input type="hidden" name="page" th:value="${criteria.page}">
+                        <input type="hidden" name="type" th:value="${search.type}">
+                        <input type="hidden" name="keyword" th:value="${search.keyword}">
+                        <div class="fields">
+                            <div class="field">
+                                <h4>번호</h4>
+                                <input type="text" th:field="*{boardId}" readonly/>
+                            </div>
+                            <div class="field">
+                                <h4>*제목</h4>
+                                <input type="text" th:field="*{boardTitle}"/>
+                            </div>
+                            <div class="field">
+                                <h4>*내용</h4>
+                                <textarea rows="6" style="resize:none" th:field="*{boardContent}"></textarea>
+                            </div>
+                            <div class="field">
+                                <h4>작성자</h4>
+                                <input type="text" th:field="*{boardWriter}" readonly/>
+                            </div>
+                            <div class="field">
+                                <h4>첨부파일</h4>
+                                <input type="file" name="upload" multiple>
+                            </div>
+                            <div class="field">
+                                <div class="uploadResult">
+                                    <ul></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <ul class="actions special">
+                            <li>
+                                <input type="button" class="button update-button" value="수정 완료"/>
+                            </li>
+                        </ul>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.dropotron.min.js"></script>
+<script src="/js/browser.min.js"></script>
+<script src="/js/breakpoints.min.js"></script>
+<script src="/js/util.js"></script>
+<script src="/js/main.js"></script>
+<script th:inline="javascript">
+    FileList.prototype.forEach = Array.prototype.forEach;
+    let files = [[${files}]];
+    const $ul = $(".uploadResult ul");
+    const $updateButton = $("input.update-button");
+    let arrayFile = new Array();
+    let i = 0, deleteIndex = 0;
+
+    showThumbnail();
+
+    function showThumbnail(){
+        let text = "";
+        files.forEach(file => {
+            let fileName = file.fileName.replaceAll("-", "_").replaceAll(" ", "_");
+            text += `<li class="original" data-file-id="${file.fileId}" data-file-name="${file.fileName}" data-file-upload-path="${file.fileUploadPath}" data-file-uuid="${file.fileUuid}" data-file-size="${file.fileSize}" data-file-is-image="${file.fileIsImage}" style="cursor: pointer;">`;
+            text += `    <img class="file-cancel" src="/images/cancel.png" width="25" style="position: absolute; right: 0; cursor: pointer;">`;
+            text += `    <div style="width:100px; height:100px;">`;
+            if(file.fileIsImage){
+                text += `    <img src="/files/display?filePath=${file.fileUploadPath}/t_${file.fileUuid}_${file.fileName}">`;
+            } else{
+                text += `    <img src="/images/attach.png" width="100">`;
+            }
+            text += `    </div>`;
+            text += `    <p style="font-size:0.7rem; width:100px; overflow:hidden; text-overflow:ellipsis;">${fileName}(${file.fileSize}KB)</p>`;
+            text += `</li>`;
+        });
+        $ul.append(text);
+    }
+
+    $ul.on("click", "img.file-cancel", function(){
+        const dataTransfer = new DataTransfer();
+        let index = $("li.new").index($(this).closest("li"));
+        if(index != -1){
+            $(this).closest("li").remove();
+            arrayFile.splice(index,1);
+            arrayFile.forEach(file => dataTransfer.items.add(file));
+            $("input[type=file]")[0].files = dataTransfer.files;
+            i--;
+        } else{
+            let text = "";
+            $(this).closest("li").hide();
+            $(this).closest("li").prop("classList").replace("original", "deleted");
+            let $deletedListTag = $(this).closest("li.deleted");
+            text += `
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileId" value="${$deletedListTag.data("file-id")}">
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileName" value="${$deletedListTag.data("file-name")}">
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileUploadPath" value="${$deletedListTag.data("file-upload-path")}">
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileUuid" value="${$deletedListTag.data("file-uuid")}">
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileSize" value="${$deletedListTag.data("file-size")}">
+                <input type="hidden" name="deleteFiles[${deleteIndex}].fileIsImage" value="${$deletedListTag.data("file-is-image")}">
+            `;
+            $("form[name=updateForm]").append(text);
+            deleteIndex++;
+        }
+    })
+
+    $("input[type=file]").on("change", e => {
+        let formData = new FormData();
+        const dataTransfer = new DataTransfer();
+
+        e.target.files.forEach(file => {
+            arrayFile.push(file);
+            formData.append("multipartFiles", file);
+        });
+
+        arrayFile.forEach(file => dataTransfer.items.add(file));
+        e.target.files = dataTransfer.files;
+
+        $.ajax({
+            url: "/files/upload",
+            type: "post",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(files){
+                let text = "";
+                files.forEach(file => {
+                    let fileName = file.fileName.replaceAll("-", "_").replaceAll(" ", "_");
+                    text += `<li class="new" data-file-name="${file.fileName}" data-file-upload-path="${file.fileUploadPath}" data-file-uuid="${file.fileUuid}" data-file-size="${file.fileSize}" data-file-is-image="${file.fileIsImage}">`;
+                    text += `    <div style="width:100px; height:100px;">`;
+                    text += `        <img data-index="${i}" class="file-cancel" src="/images/cancel.png" width="25" style="position: absolute; right: 0; cursor: pointer;">`;
+                    if(file.fileIsImage){
+                        text += `    <img src="/files/display?filePath=${file.fileUploadPath}/t_${file.fileUuid}_${file.fileName}">`;
+                    } else{
+                        text += `    <img src="/images/attach.png" width="100">`;
+                    }
+                    text += `    </div>`;
+                    text += `    <p style="font-size:0.7rem; width:100px; overflow:hidden; text-overflow:ellipsis;">${fileName}(${file.fileSize}KB)</p>`;
+                    text += `</li>`;
+                    i++;
+                });
+                $ul.append(text);
+            }
+        });
+    })
+
+    $updateButton.on("click", function(){
+        let text = "";
+        $("input[type=file]")[0].files.forEach((file, i) => {
+            let $listTags = $("li.new");
+            text += `
+                <input type="hidden" name="files[${i}].fileName" value="${$listTags.eq(i).data("file-name")}">
+                <input type="hidden" name="files[${i}].fileUploadPath" value="${$listTags.eq(i).data("file-upload-path")}">
+                <input type="hidden" name="files[${i}].fileUuid" value="${$listTags.eq(i).data("file-uuid")}">
+                <input type="hidden" name="files[${i}].fileSize" value="${$listTags.eq(i).data("file-size")}">
+                <input type="hidden" name="files[${i}].fileIsImage" value="${$listTags.eq(i).data("file-is-image")}">
+            `;
+        });
+        $("form[name=updateForm]").append(text);
+        $("form[name=updateForm]").submit();
+    });
+</script>
+</html>
